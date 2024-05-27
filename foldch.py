@@ -41,8 +41,9 @@ def main(args: Arguments):
         ctrl_target_group = grouped_combinations['Cq'].get_group((sample, args.reference_target))
 
         ct_avg = group.mean()
-        ct_std = group.std()
         ct_avg_ctrl = ctrl_target_group.mean()
+        
+        ct_std = group.std()
         ct_std_ctrl = ctrl_target_group.std()
 
         delta_ct = ct_avg - ct_avg_ctrl
@@ -52,17 +53,13 @@ def main(args: Arguments):
             np.array([
                 sample,
                 target,
-                ct_avg,
-                ct_std,
-                ct_avg_ctrl,
-                ct_std_ctrl,
                 delta_ct,
                 delta_ct_std
             ])
         )
 
-    output = pd.DataFrame(np.asarray(intermediate), columns=['Sample', 'Target', 'Avg Ct', 'Std Ct', 'Avg Ct Ctrl Target', 'Std Ct Ctrl Target', 'Delta Ct', 'Std Delta Ct'])
-    output[['Avg Ct', 'Std Ct', 'Avg Ct Ctrl Target', 'Std Ct Ctrl Target', 'Delta Ct', 'Std Delta Ct']] = output[['Avg Ct', 'Std Ct', 'Avg Ct Ctrl Target', 'Std Ct Ctrl Target', 'Delta Ct', 'Std Delta Ct']].apply(pd.to_numeric)
+    output = pd.DataFrame(np.asarray(intermediate), columns=['Sample', 'Target', 'Delta Ct', 'Std Delta Ct'])
+    output[['Delta Ct', 'Std Delta Ct']] = output[['Delta Ct', 'Std Delta Ct']].apply(pd.to_numeric)
     # output = output.convert_dtypes()
 
     results = []
