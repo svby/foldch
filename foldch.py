@@ -22,7 +22,7 @@ parser.add_argument('--reference_sample', '--rs', type=str, default='H1975 par')
 parser.add_argument('--reference_target', '--rt', type=str, default='28S')
 
 
-def main(args: Arguments):
+def main(args: Arguments) -> None:
     input_df = pd.read_excel(args.input_file)
 
     targets = input_df['Target'].unique()
