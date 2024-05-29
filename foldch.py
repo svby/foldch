@@ -13,6 +13,7 @@ from pathlib import Path
 class Arguments:
     input_file: str
     output_file: str | None
+    force: bool
     input_path: Path
     output_path: Path
     reference_sample: str
@@ -26,6 +27,7 @@ parser.add_argument('input_file', type=str)
 parser.add_argument('--output_file', '--out', '-o', type=str, required=False)
 parser.add_argument('--reference_sample', '--rs', type=str, default='H1975 par')
 parser.add_argument('--reference_target', '--rt', type=str, default='28S')
+parser.add_argument('--force', '-f', action='store_true')
 
 
 def main(args: Arguments) -> None:
@@ -71,6 +73,8 @@ def main(args: Arguments) -> None:
     output_df['Log Fold CI 68'] = output_df.apply(lambda row: f'[{row['Log Fold CI 68 Lower']:.2g}, {row['Log Fold CI 68 Upper']:.2g}]', axis=1)
     
     simple_output = output_df[['Sample', 'Target', 'Fold', 'Fold CI 68', 'Log Fold', 'Log Fold CI 68']]
+    simple_output = simple_output.rename(columns={'Fold': 'Rel Expr', 'Log Fold': 'Log Rel Expr'})
+    simple_output = simple_output.loc[simple_output['Sample'] != args.reference_sample]
     
     output_df.to_excel(args.output_path)
     
@@ -88,7 +92,10 @@ if __name__ == "__main__":
         sys.exit(1)
     
     if args.output_path.exists():
-        print(f'Output file already exists ({args.output_path})', file=sys.stderr)
-        sys.exit(1)
+        if args.force:
+            args.output_path.unlink()
+        else:
+            print(f'Output file already exists ({args.output_path})', file=sys.stderr)
+            sys.exit(1)
     
     main(args)
