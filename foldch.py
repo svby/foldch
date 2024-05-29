@@ -4,12 +4,17 @@
 # different cell lines aren't particularly ideal currently
 
 import argparse
+import sys
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
 
 class Arguments:
     input_file: str
+    output_file: str | None
+    input_path: Path
+    output_path: Path
     reference_sample: str
     reference_target: str
 
@@ -18,12 +23,13 @@ parser = argparse.ArgumentParser(
     prog='foldch'
 )
 parser.add_argument('input_file', type=str)
+parser.add_argument('--output_file', '--out', '-o', type=str, required=False)
 parser.add_argument('--reference_sample', '--rs', type=str, default='H1975 par')
 parser.add_argument('--reference_target', '--rt', type=str, default='28S')
 
 
 def main(args: Arguments) -> None:
-    input_df = pd.read_excel(args.input_file)
+    input_df = pd.read_excel(args.input_path)
 
     targets = input_df['Target'].unique()
     samples = input_df['Sample'].unique()
@@ -61,11 +67,19 @@ def main(args: Arguments) -> None:
     
     simple_output = output_df[['Sample', 'Target', 'Fold', 'Fold CI 68', 'Log Fold', 'Log Fold CI 68']]
     
-    output_df.to_excel('output.xlsx')
+    output_df.to_excel(args.output_path)
     
     print(simple_output)
     print('Reference sample:', args.reference_sample, '; reference target:', args.reference_target)
 
 
 if __name__ == "__main__":
-    main(parser.parse_args(None, Arguments))
+    args = parser.parse_args(None, Arguments)
+    args.input_path = Path(args.input_file).resolve()
+    args.output_path = Path(args.output_file) if args.output_file is not None else args.input_path.parent / f'Analysis - {args.input_path.stem}.xlsx'
+    
+    if args.output_path.exists():
+        print('Output file already exists', file=sys.stderr)
+        sys.exit(1)
+    
+    main(args)

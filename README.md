@@ -9,3 +9,9 @@ Takes a path to an Excel spreadsheet, a reference sample/cell line and a referen
 - numpy
 - pandas
 
+## Example usage
+
+```
+# Will create a file titled "Analysis - H1975 - Quantification Summary.xlsx"
+./foldch.py "H1975 - Quantification Summary.xlsx" --rs "H1975" --rt "Mdh1"
+```
