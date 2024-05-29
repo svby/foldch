@@ -33,7 +33,7 @@ def main(args: Arguments) -> None:
     if args.input_path.suffix == '.xlsx' or args.input_path.suffix == '.xls': input_df = pd.read_excel(args.input_path)
     elif args.input_path.suffix == '.csv': input_df = pd.read_csv(args.input_path)
     else:
-        print('Input file is of unknown type (neither .xlsx nor .csv)', file=sys.stderr)
+        print(f'Input file ({args.input_path.name}) is of unknown type (neither .xlsx/.xls nor .csv)', file=sys.stderr)
         sys.exit(1)
 
     targets = input_df['Target'].unique()
@@ -83,8 +83,12 @@ if __name__ == "__main__":
     args.input_path = Path(args.input_file).resolve()
     args.output_path = Path(args.output_file) if args.output_file is not None else args.input_path.parent / f'Analysis - {args.input_path.stem}.xlsx'
     
+    if not args.input_path.exists():
+        print(f'Input file does not exist ({args.input_path})', file=sys.stderr)
+        sys.exit(1)
+    
     if args.output_path.exists():
-        print('Output file already exists', file=sys.stderr)
+        print(f'Output file already exists ({args.output_path})', file=sys.stderr)
         sys.exit(1)
     
     main(args)
