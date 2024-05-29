@@ -21,13 +21,23 @@ class Arguments:
 
 
 parser = argparse.ArgumentParser(
-    prog='foldch'
+    prog='foldch',
+    description='''
+        Fold gene expression analysis, for Bio-Rad CFX qPCR output.
+    '''
 )
-parser.add_argument('input_file', type=str)
-parser.add_argument('--output_file', '--out', '-o', type=str, required=False)
-parser.add_argument('--reference_sample', '--rs', type=str, default='H1975 par')
-parser.add_argument('--reference_target', '--rt', type=str, default='28S')
-parser.add_argument('--force', '-f', action='store_true')
+parser.add_argument(
+    'input_file',
+    type=str,
+    help='''
+        input data, either CSV or Excel spreadsheet (.xls/.xlsx);
+        if input is an Excel spreadsheet, the first sheet is used.
+    '''
+)
+parser.add_argument('--force', '-f', action='store_true', help='whether to overwrite existing output file')
+parser.add_argument('--output_file', '--out', '-o', type=str, required=False, help='path to output file (defaults to "Analysis - [input_file].xlsx")')
+parser.add_argument('--reference_sample', '--rs', type=str, default='H1975 par', help='biological control sample (e.g. parental cell line)')
+parser.add_argument('--reference_target', '--rt', type=str, default='28S', help='control target (e.g. housekeeping gene)')
 
 
 def main(args: Arguments) -> None:
