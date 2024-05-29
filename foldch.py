@@ -29,7 +29,12 @@ parser.add_argument('--reference_target', '--rt', type=str, default='28S')
 
 
 def main(args: Arguments) -> None:
-    input_df = pd.read_excel(args.input_path)
+    input_df: pd.DataFrame
+    if args.input_path.suffix == '.xlsx' or args.input_path.suffix == '.xls': input_df = pd.read_excel(args.input_path)
+    elif args.input_path.suffix == '.csv': input_df = pd.read_csv(args.input_path)
+    else:
+        print('Input file is of unknown type (neither .xlsx nor .csv)', file=sys.stderr)
+        sys.exit(1)
 
     targets = input_df['Target'].unique()
     samples = input_df['Sample'].unique()
