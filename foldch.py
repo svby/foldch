@@ -48,16 +48,12 @@ def main(args: Arguments) -> None:
         print(f'Input file ({args.input_path.name}) is of unknown type (neither .xlsx/.xls nor .csv)', file=sys.stderr)
         sys.exit(1)
 
-    targets = input_df['Target'].unique()
-    samples = input_df['Sample'].unique()
 
-    combinations = np.meshgrid(samples, targets)
-    combinations = np.vstack(np.swapaxes(np.stack(np.swapaxes(combinations, 1, 2), 1), 1, 2))
-    
-    output_df = pd.DataFrame(combinations, columns=['Sample', 'Target'])
-    
     def get_group(df: pd.DataFrame, sample: str, target: str) -> pd.DataFrame:
         return df.groupby(['Sample', 'Target']).get_group((sample, target))
+
+    
+    output_df = input_df[['Sample', 'Target']].drop_duplicates()
     
     # Calculated from input
     output_df['Ct Avg'] = output_df.apply(lambda row: get_group(input_df, row['Sample'], row['Target'])['Cq'].mean(), axis=1)
