@@ -6,16 +6,17 @@
 import argparse
 import sys
 from pathlib import Path
+from typing import List
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 class Arguments:
-    input_file: str
+    input_files: List[str]
     output_file: str | None
     force: bool
-    input_path: Path
+    input_paths: List[Path]
     output_path: Path
     reference_sample: str
     reference_target: str
@@ -28,10 +29,11 @@ parser = argparse.ArgumentParser(
     '''
 )
 parser.add_argument(
-    'input_file',
+    'input_files',
     type=str,
+    nargs='*',
     help='''
-        input data, either CSV or Excel spreadsheet (.xls/.xlsx);
+        input data, either CSV or Excel spreadsheets (.xls/.xlsx);
         if input is an Excel spreadsheet, the first sheet is used.
     '''
 )
@@ -41,13 +43,22 @@ parser.add_argument('--reference_sample', '--rs', type=str, default='H1975 par',
 parser.add_argument('--reference_target', '--rt', type=str, default='28S', help='control target (e.g. housekeeping gene)')
 
 
-def main(args: Arguments) -> None:
-    input_df: pd.DataFrame
-    if args.input_path.suffix == '.xlsx' or args.input_path.suffix == '.xls': input_df = pd.read_excel(args.input_path)
-    elif args.input_path.suffix == '.csv': input_df = pd.read_csv(args.input_path)
+def read_input(path: Path) -> pd.DataFrame:
+    if path.suffix == '.xlsx' or path.suffix == '.xls':
+        return pd.read_excel(path)
+    elif path.suffix == '.csv':
+        return pd.read_csv(path)
     else:
-        print(f'Input file ({args.input_path.name}) is of unknown type (neither .xlsx/.xls nor .csv)', file=sys.stderr)
+        print(f'Input file ({path.name}) is of unknown type (neither .xlsx/.xls nor .csv)', file=sys.stderr)
         sys.exit(1)
+        
+
+def concat_inputs(paths: List[Path]) -> pd.DataFrame:
+    return pd.concat([read_input(path) for path in paths], axis=0)
+
+
+def main(args: Arguments) -> None:
+    input_df = concat_inputs(args.input_paths)
 
 
     def get_group(df: pd.DataFrame, sample: str, target: str) -> pd.DataFrame:
@@ -108,11 +119,22 @@ def main(args: Arguments) -> None:
 
 if __name__ == "__main__":
     args = parser.parse_args(None, Arguments)
-    args.input_path = Path(args.input_file).resolve()
-    args.output_path = Path(args.output_file) if args.output_file is not None else args.input_path.parent / f'Analysis - {args.input_path.stem}.xlsx'
     
-    if not args.input_path.exists():
-        print(f'Input file does not exist ({args.input_path})', file=sys.stderr)
+    args.input_paths = [Path(file).resolve() for file in args.input_files]
+    if args.output_file is not None:
+        args.output_path = Path(args.output_file)
+    else:
+        if len(args.input_paths) == 1:
+            first_input = args.input_paths[0]
+            args.output_path = Path(f'Analysis - {first_input.stem}.xlsx')
+        else:
+            args.output_path = Path('Analysis.xlsx')
+
+        print(f'No output file specified, defaulting to {args.output_path}')
+    
+    nonexistent = list(filter(lambda path: not path.exists(), args.input_paths))
+    if any(nonexistent):
+        print(f'Some input files do not exist ({', '.join(str(path) for path in nonexistent)})', file=sys.stderr)
         sys.exit(1)
     
     if args.output_path.exists():
