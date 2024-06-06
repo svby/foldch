@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     'input_files',
     type=str,
-    nargs='*',
+    nargs='+',
     help='''
         input data, either CSV or Excel spreadsheets (.xls/.xlsx);
         if input is an Excel spreadsheet, the first sheet is used.
