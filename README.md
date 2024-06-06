@@ -8,6 +8,7 @@ Takes a path to an Excel spreadsheet, a reference sample/cell line and a referen
 
 - numpy
 - pandas
+- matplotlib
 
 ## Example usage
 

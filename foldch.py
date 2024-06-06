@@ -5,10 +5,11 @@
 
 import argparse
 import sys
-import pandas as pd
-import numpy as np
 from pathlib import Path
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 class Arguments:
     input_file: str
@@ -86,6 +87,23 @@ def main(args: Arguments) -> None:
     
     print(simple_output)
     print('Reference sample:', args.reference_sample, '; reference target:', args.reference_target)
+    
+    for (sample,), group in output_df.groupby(['Sample']):
+        if sample == args.reference_sample: continue
+        
+        group = group.reset_index()
+        group = group.loc[group['Target'] != args.reference_target]
+        
+        errors = group.apply(lambda entry: [entry['Fold'] - entry['Fold CI 68 Lower'], entry['Fold CI 68 Upper'] - entry['Fold']], axis=1, result_type='expand').transpose()
+        
+        plt.figure()
+        plt.suptitle('Relative expression')
+        plt.title(sample)
+        plt.bar(group['Target'], group['Fold'], edgecolor='black', color='none')
+        plt.errorbar(group['Target'], group['Fold'], yerr=errors, fmt='o', color='red', capsize=3, markersize=5)
+        plt.axhline(y=1.0, color='gray', linestyle=(0, (5, 5))).set_linewidth(0.5)
+    
+    plt.show()
 
 
 if __name__ == "__main__":
