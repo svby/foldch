@@ -20,6 +20,7 @@ class Arguments:
     output_path: Path
     reference_sample: str
     reference_target: str
+    concat: str
 
 
 parser = argparse.ArgumentParser(
@@ -41,6 +42,17 @@ parser.add_argument('--force', '-f', action='store_true', help='whether to overw
 parser.add_argument('--output_file', '--out', '-o', type=str, required=False, help='path to output file (defaults to "Analysis - [input_file].xlsx")')
 parser.add_argument('--reference_sample', '--rs', type=str, default='H1975 par', help='biological control sample (e.g. parental cell line)')
 parser.add_argument('--reference_target', '--rt', type=str, default='28S', help='control target (e.g. housekeeping gene)')
+parser.add_argument(
+    '--concat', '-c',
+    type=str,
+    default='input',
+    choices=['input', 'output'],
+    help='''
+        specify how to process multiple input files.
+        if argument is 'input', inputs will be concatenated and treated as a single experiment;
+        if argument is 'output', input files will be treated as separate experiments and the results aggregated for chart generation.
+    '''
+)
 
 
 def read_input(path: Path) -> pd.DataFrame:
@@ -57,15 +69,13 @@ def concat_inputs(paths: List[Path]) -> pd.DataFrame:
     return pd.concat([read_input(path) for path in paths], axis=0)
 
 
-def main(args: Arguments) -> None:
-    input_df = concat_inputs(args.input_paths)
+def foldch(input_df: pd.DataFrame) -> pd.DataFrame:
+    output_df = input_df[['Sample', 'Target']].drop_duplicates()
 
 
     def get_group(df: pd.DataFrame, sample: str, target: str) -> pd.DataFrame:
         return df.groupby(['Sample', 'Target']).get_group((sample, target))
 
-    
-    output_df = input_df[['Sample', 'Target']].drop_duplicates()
     
     # Calculated from input
     output_df['Ct Avg'] = output_df.apply(lambda row: get_group(input_df, row['Sample'], row['Target'])['Cq'].mean(), axis=1)
@@ -90,6 +100,19 @@ def main(args: Arguments) -> None:
     output_df['Log Fold CI 68 Upper'] = np.log2(output_df['Fold CI 68 Upper'])
     output_df['Log Fold CI 68'] = output_df.apply(lambda row: f'[{row['Log Fold CI 68 Lower']:.2g}, {row['Log Fold CI 68 Upper']:.2g}]', axis=1)
     
+    return output_df
+    
+
+def main(args: Arguments) -> None:
+    output_df: pd.DataFrame
+    
+    if args.concat == 'input':
+        output_df = foldch(concat_inputs(args.input_paths))
+    elif args.concat == 'output':
+        output_df = pd.concat([foldch(read_input(input)) for input in args.input_paths], axis=0)
+    else:
+        raise ValueError(f'invalid concat strategy {args.concat}')
+
     simple_output = output_df[['Sample', 'Target', 'Fold', 'Fold CI 68', 'Log Fold', 'Log Fold CI 68']]
     simple_output = simple_output.rename(columns={'Fold': 'Rel Expr', 'Log Fold': 'Log Rel Expr'})
     simple_output = simple_output.loc[simple_output['Sample'] != args.reference_sample]
