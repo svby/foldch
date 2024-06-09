@@ -155,7 +155,7 @@ if __name__ == "__main__":
 
         print(f'No output file specified, defaulting to {args.output_path}')
     
-    nonexistent = list(filter(lambda path: not path.exists(), args.input_paths))
+    nonexistent = [path for path in args.input_paths if not path.exists()]
     if any(nonexistent):
         print(f'Some input files do not exist ({', '.join(str(path) for path in nonexistent)})', file=sys.stderr)
         sys.exit(1)
