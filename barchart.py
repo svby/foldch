@@ -14,6 +14,7 @@ class Arguments:
     input_paths: List[Path]
     groups: List[List[str]] = []
     sample_renames: List[List[str]] = []
+    output_dir: str
     
     linear: bool
 
@@ -30,10 +31,11 @@ parser.add_argument(
     nargs='+',
     help='input data (foldch output)'
 )
-parser.add_argument('--linear', type=bool, default=False, help='plot non-log fold values')
+parser.add_argument('--linear', action='store_true', default=False, help='plot non-log fold values')
 parser.add_argument('--group', dest='groups', type=str, nargs='+', action='append', help='group samples in one plot')
+parser.add_argument('--output', '-o', dest='output_dir', type=str, default='.', help='output directory for figures')
 parser.add_argument(
-    '--rename-sample', '--S',
+    '--rename-sample', '-S',
     dest='sample_renames',
     type=str,
     metavar=('SAMPLE', 'NEW_NAME'),
@@ -64,6 +66,8 @@ def get_sample_name(args: Arguments, sample: str) -> str:
 
 
 def main(args: Arguments) -> None:
+    output_path = Path(args.output_dir).resolve()
+    
     input_df = concat_inputs(args.input_paths)
     
     grouping = input_df.groupby(['Sample'])
@@ -86,6 +90,8 @@ def main(args: Arguments) -> None:
         axes.tick_params(axis='x', labelrotation=45)
         
         axes.title.set_text(get_sample_name(args, sample))
+
+    figcount = 1
 
     for plot_group in args.groups:
         (fig, axes_list) = plt.subplots(1, len(plot_group), sharex=True, sharey=True)
@@ -110,6 +116,10 @@ def main(args: Arguments) -> None:
                 axes.set_ylabel('fold change' if args.linear else 'log2(fold change)')
         
         fig.tight_layout()
+        figure_path = output_path / f'figure{figcount}.pdf'
+        fig.savefig(figure_path, format='pdf')
+        print(f'Saved figure {figcount} to {figure_path}')
+        figcount = figcount + 1
         
     for sample in unplotted_samples:
         (fig, axes) = plt.subplots(1)
@@ -124,6 +134,10 @@ def main(args: Arguments) -> None:
         axes.text(0.01, 0.99, f'Control: {get_sample_name(args, reference_sample)}/{reference_target}', ha='left', va='top', transform=axes.transAxes).set_fontsize('small')
         
         fig.tight_layout()
+        figure_path = output_path / f'figure{figcount}.pdf'
+        fig.savefig(figure_path, format='pdf')
+        print(f'Saved figure {figcount} to {figure_path}')
+        figcount = figcount + 1
         
     plt.show()
 
