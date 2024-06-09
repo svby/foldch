@@ -79,11 +79,11 @@ def main(args: Arguments) -> None:
         if args.linear:
             values = group['Fold']
             errors = group.apply(lambda entry: [entry['Fold'] - entry['Fold CI 68 Lower'], entry['Fold CI 68 Upper'] - entry['Fold']], axis=1, result_type='expand').transpose()
-            axes.axhline(y=1.0, color='gray', linestyle=(0, (5, 5))).set_linewidth(0.5)
+            axes.axhline(y=1.0, color='gray', linestyle='--').set_linewidth(0.5)
         else:
             values = group['Log Fold']
             errors = group.apply(lambda entry: [entry['Log Fold'] - entry['Log Fold CI 68 Lower'], entry['Log Fold CI 68 Upper'] - entry['Log Fold']], axis=1, result_type='expand').transpose()
-            axes.axhline(y=0.0, color='gray', linestyle='--').set_linewidth(0.5)
+            axes.axhline(y=0.0, color='gray', linestyle=(0, (5, 5))).set_linewidth(0.5)
         
         axes.bar(group['Target'], values, edgecolor='black', color='none')
         axes.errorbar(group['Target'], values, yerr=errors, fmt='o', color='red', capsize=3, markersize=5)
