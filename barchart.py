@@ -12,9 +12,6 @@ class Arguments:
     input_files: List[str]
     input_paths: List[Path]
 
-    # reference_sample: str
-    # reference_target: str
-
 
 parser = argparse.ArgumentParser(
     prog='barchart',
@@ -28,9 +25,6 @@ parser.add_argument(
     nargs='+',
     help='input data (foldch output)'
 )
-# parser.add_argument('--force', '-f', action='store_true', help='whether to overwrite existing output file')
-# parser.add_argument('--reference_sample', '--rs', type=str, default='H1975 par', help='biological control sample (e.g. parental cell line)')
-# parser.add_argument('--reference_target', '--rt', type=str, default='28S', help='control target (e.g. housekeeping gene)')
 
 
 def read_input(path: Path) -> pd.DataFrame:
@@ -51,6 +45,9 @@ def main(args: Arguments) -> None:
     input_df = concat_inputs(args.input_paths)
     
     for (sample,), group in input_df.groupby(['Sample']):
+        (reference_sample,) = group['Ref Sample'].unique()
+        (reference_target,) = group['Ref Target'].unique()
+        
         group = group.reset_index()
         
         errors = group.apply(lambda entry: [entry['Fold'] - entry['Fold CI 68 Lower'], entry['Fold CI 68 Upper'] - entry['Fold']], axis=1, result_type='expand').transpose()
@@ -58,6 +55,7 @@ def main(args: Arguments) -> None:
         plt.figure()
         plt.suptitle('Relative gene expression')
         plt.title(f'Sample: {sample}')
+        plt.figtext(0.015, 0.015, f'Control: {reference_sample}/{reference_target}')
         plt.bar(group['Target'], group['Fold'], edgecolor='black', color='none')
         plt.errorbar(group['Target'], group['Fold'], yerr=errors, fmt='o', color='red', capsize=3, markersize=5)
         plt.axhline(y=1.0, color='gray', linestyle=(0, (5, 5))).set_linewidth(0.5)
