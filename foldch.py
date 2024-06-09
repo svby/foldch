@@ -10,14 +10,14 @@ from typing import List
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 class Arguments:
-    input_files: List[str]
-    output_file: str | None
-    force: bool
     input_paths: List[Path]
     output_path: Path
+
+    input_files: List[str]
+    force: bool
+    output_file: str | None
     reference_sample: str
     reference_target: str
     concat: str
@@ -100,6 +100,9 @@ def foldch(input_df: pd.DataFrame) -> pd.DataFrame:
     output_df['Log Fold CI 68 Upper'] = np.log2(output_df['Fold CI 68 Upper'])
     output_df['Log Fold CI 68'] = output_df.apply(lambda row: f'[{row['Log Fold CI 68 Lower']:.2g}, {row['Log Fold CI 68 Upper']:.2g}]', axis=1)
     
+    output_df = output_df.loc[output_df['Sample'] != args.reference_sample]
+    output_df = output_df.loc[output_df['Target'] != args.reference_target]
+    
     return output_df
     
 
@@ -112,32 +115,20 @@ def main(args: Arguments) -> None:
         output_df = pd.concat([foldch(read_input(input)) for input in args.input_paths], axis=0)
     else:
         raise ValueError(f'invalid concat strategy {args.concat}')
-
+    
     simple_output = output_df[['Sample', 'Target', 'Fold', 'Fold CI 68', 'Log Fold', 'Log Fold CI 68']]
     simple_output = simple_output.rename(columns={'Fold': 'Rel Expr', 'Log Fold': 'Log Rel Expr'})
     simple_output = simple_output.loc[simple_output['Sample'] != args.reference_sample]
     
-    output_df.to_excel(args.output_path)
-    
     print(simple_output)
     print('Reference sample:', args.reference_sample, '; reference target:', args.reference_target)
     
-    for (sample,), group in output_df.groupby(['Sample']):
-        if sample == args.reference_sample: continue
+    if args.output_path.suffix == '.xlsx' or args.output_path.suffix == '.xls':    
+        output_df.to_excel(args.output_path)
+    else:
+        output_df.to_csv(args.output_path)
         
-        group = group.reset_index()
-        group = group.loc[group['Target'] != args.reference_target]
-        
-        errors = group.apply(lambda entry: [entry['Fold'] - entry['Fold CI 68 Lower'], entry['Fold CI 68 Upper'] - entry['Fold']], axis=1, result_type='expand').transpose()
-        
-        plt.figure()
-        plt.suptitle('Relative expression')
-        plt.title(sample)
-        plt.bar(group['Target'], group['Fold'], edgecolor='black', color='none')
-        plt.errorbar(group['Target'], group['Fold'], yerr=errors, fmt='o', color='red', capsize=3, markersize=5)
-        plt.axhline(y=1.0, color='gray', linestyle=(0, (5, 5))).set_linewidth(0.5)
-    
-    plt.show()
+    print(f'Results saved to {args.output_path}')
 
 
 if __name__ == "__main__":
@@ -149,9 +140,9 @@ if __name__ == "__main__":
     else:
         if len(args.input_paths) == 1:
             first_input = args.input_paths[0]
-            args.output_path = Path(f'Analysis - {first_input.stem}.xlsx')
+            args.output_path = Path(f'Analysis - {first_input.stem}.csv')
         else:
-            args.output_path = Path('Analysis.xlsx')
+            args.output_path = Path('Analysis.csv')
 
         print(f'No output file specified, defaulting to {args.output_path}')
     
