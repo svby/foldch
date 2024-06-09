@@ -13,6 +13,7 @@ class Arguments:
     input_files: List[str]
     input_paths: List[Path]
     groups: List[List[str]] = []
+    sample_renames: List[List[str]] = []
     
     linear: bool
 
@@ -31,6 +32,15 @@ parser.add_argument(
 )
 parser.add_argument('--linear', type=bool, default=False, help='plot non-log fold values')
 parser.add_argument('--group', dest='groups', type=str, nargs='+', action='append', help='group samples in one plot')
+parser.add_argument(
+    '--rename-sample', '--S',
+    dest='sample_renames',
+    type=str,
+    metavar=('SAMPLE', 'NEW_NAME'),
+    nargs=2,
+    action='append',
+    help='samples to rename'
+)
 
 
 def read_input(path: Path) -> pd.DataFrame:
@@ -45,11 +55,16 @@ def read_input(path: Path) -> pd.DataFrame:
 
 def concat_inputs(paths: List[Path]) -> pd.DataFrame:
     return pd.concat([read_input(path) for path in paths], axis=0)
-    
+
+
+def get_sample_name(args: Arguments, sample: str) -> str:
+    for (old, new) in args.sample_renames:
+        if old == sample: return new
+    return sample
+
 
 def main(args: Arguments) -> None:
     input_df = concat_inputs(args.input_paths)
-    print(args.groups)
     
     grouping = input_df.groupby(['Sample'])
     unplotted_samples = [group[0][0] for group in grouping]
@@ -68,15 +83,15 @@ def main(args: Arguments) -> None:
         
         axes.bar(group['Target'], values, edgecolor='black', color='none')
         axes.errorbar(group['Target'], values, yerr=errors, fmt='o', color='red', capsize=3, markersize=5)
+        axes.tick_params(axis='x', labelrotation=45)
         
-        axes.title.set_text(f'Sample: {sample}')
+        axes.title.set_text(get_sample_name(args, sample))
 
     for plot_group in args.groups:
         (fig, axes_list) = plt.subplots(1, len(plot_group), sharex=True, sharey=True)
-        fig.suptitle('Relative gene expression')
-        fig.set_size_inches(5 * len(plot_group), 5)
+        fig.suptitle('Relative gene expression', weight='bold').set_fontsize('x-large')
+        fig.set_size_inches(6 * len(plot_group), 5)
         
-        controls = []
         for i in range(len(plot_group)):
             sample = plot_group[i]
             axes: Axes = axes_list[i]
@@ -84,28 +99,31 @@ def main(args: Arguments) -> None:
             group = grouping.get_group((sample,))
             (reference_sample,) = group['Ref Sample'].unique()
             (reference_target,) = group['Ref Target'].unique()
-            controls.append(f'{reference_sample}/{reference_target}')
             
-            unplotted_samples.remove(sample)
+            if sample in unplotted_samples:
+                unplotted_samples.remove(sample)
+
             plot(axes, group)
+            axes.text(0.01, 0.99, f'Control: {get_sample_name(args, reference_sample)}/{reference_target}', ha='left', va='top', transform=axes.transAxes).set_fontsize('small')
 
             if i == 0: 
                 axes.set_ylabel('fold change' if args.linear else 'log2(fold change)')
         
-        if len(set(controls)) == 1: controls = [controls[0]]
-        fig.text(0.015, 0.015, f'Control: {', '.join(controls)}').set_fontsize('medium')
+        fig.tight_layout()
         
     for sample in unplotted_samples:
         (fig, axes) = plt.subplots(1)
-        fig.suptitle('Relative gene expression')
-        fig.set_size_inches(5, 5)
+        fig.suptitle('Relative gene expression', weight='bold').set_fontsize('x-large')
+        fig.set_size_inches(6, 5)
         
         group = grouping.get_group((sample,))
         (reference_sample,) = group['Ref Sample'].unique()
         (reference_target,) = group['Ref Target'].unique()
         plot(axes, group)
         
-        fig.text(0.015, 0.015, f'Control: {reference_sample}/{reference_target}').set_fontsize('medium')
+        axes.text(0.01, 0.99, f'Control: {get_sample_name(args, reference_sample)}/{reference_target}', ha='left', va='top', transform=axes.transAxes).set_fontsize('small')
+        
+        fig.tight_layout()
         
     plt.show()
 
