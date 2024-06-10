@@ -144,6 +144,7 @@ def main(args: Arguments) -> None:
         (reference_target,) = group['Ref Target'].unique()
         plot(axes, group)
         
+        axes.set_ylabel('fold change' if args.linear else 'log2(fold change)')
         axes.text(0.01, 0.99, f'Control: {get_sample_name(args, reference_sample)}/{reference_target}', ha='left', va='top', transform=axes.transAxes).set_fontsize('small')
         
         fig.tight_layout()
