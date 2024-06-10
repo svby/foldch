@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List
 
 from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -15,6 +16,7 @@ class Arguments:
     groups: List[List[str]] = []
     sample_renames: List[List[str]] = []
     output_dir: str
+    file_suffix: str
     
     linear: bool
 
@@ -34,6 +36,7 @@ parser.add_argument(
 parser.add_argument('--linear', action='store_true', default=False, help='plot non-log fold values')
 parser.add_argument('--group', dest='groups', type=str, nargs='+', action='append', help='group samples in one plot')
 parser.add_argument('--output', '-o', dest='output_dir', type=str, default='.', help='output directory for figures')
+parser.add_argument('--figsuffix', dest='file_suffix', type=str, default='', help='suffix for file names')
 parser.add_argument(
     '--rename-sample', '-S',
     dest='sample_renames',
@@ -92,6 +95,19 @@ def main(args: Arguments) -> None:
         axes.title.set_text(get_sample_name(args, sample))
 
     figcount = 1
+    def new_figname() -> str:
+        nonlocal figcount
+        name = f'figure{figcount}'
+        if len(args.file_suffix) != 0: name = name + f'-{args.file_suffix}'
+        figcount = figcount + 1
+        return name
+    
+    
+    def save_fig(fig: Figure) -> None:
+        figure_path = output_path / f'{new_figname()}.pdf'
+        fig.savefig(figure_path, format='pdf')
+        print(f'Saved figure to {figure_path}')
+    
 
     for plot_group in args.groups:
         (fig, axes_list) = plt.subplots(1, len(plot_group), sharex=True, sharey=True)
@@ -116,10 +132,7 @@ def main(args: Arguments) -> None:
                 axes.set_ylabel('fold change' if args.linear else 'log2(fold change)')
         
         fig.tight_layout()
-        figure_path = output_path / f'figure{figcount}.pdf'
-        fig.savefig(figure_path, format='pdf')
-        print(f'Saved figure {figcount} to {figure_path}')
-        figcount = figcount + 1
+        save_fig(fig)
         
     for sample in unplotted_samples:
         (fig, axes) = plt.subplots(1)
@@ -134,10 +147,7 @@ def main(args: Arguments) -> None:
         axes.text(0.01, 0.99, f'Control: {get_sample_name(args, reference_sample)}/{reference_target}', ha='left', va='top', transform=axes.transAxes).set_fontsize('small')
         
         fig.tight_layout()
-        figure_path = output_path / f'figure{figcount}.pdf'
-        fig.savefig(figure_path, format='pdf')
-        print(f'Saved figure {figcount} to {figure_path}')
-        figcount = figcount + 1
+        save_fig(fig)
         
     plt.show()
 
